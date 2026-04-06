@@ -222,83 +222,46 @@ impl<'a> Swapper<'a> {
       "".to_string()
     };
 
-    let pane_command = format!(
-        "tmux capture-pane -J -t {active_pane_id} -p{scroll_params} | tail -n {height} | {dir}/target/release/thumbs -f '%U:%H' -t {tmp} {args}; tmux swap-pane -t {active_pane_id}; {zoom_command} tmux wait-for -S {signal}",
+    let pane_height = self.active_pane_height.unwrap_or(24);
+
+    let popup_command = format!(
+        "tmux capture-pane -J -t {active_pane_id} -p{scroll_params} | tail -n {height} | {dir}/target/release/thumbs -f '%U:%H' -t {tmp} {args}",
         active_pane_id = active_pane_id,
         scroll_params = scroll_params,
-        height = self.active_pane_height.unwrap_or(i32::MAX),
+        height = pane_height,
         dir = self.dir,
         tmp = TMP_FILE,
         args = args.join(" "),
-        zoom_command = zoom_command,
-        signal = self.signal
     );
 
     let thumbs_command = vec![
       "tmux",
-      "new-window",
-      "-P",
-      "-F",
-      "#{pane_id}",
-      "-d",
-      "-n",
-      "[thumbs]",
-      pane_command.as_str(),
+      "display-popup",
+      "-w", "100%",
+      "-h", "100%",
+      "-E",
+      popup_command.as_str(),
     ];
 
     let params: Vec<String> = thumbs_command.iter().map(|arg| arg.to_string()).collect();
 
-    self.thumbs_pane_id = Some(self.executor.execute(params));
+    self.executor.execute(params);
+    // Signal immediately since display-popup blocks until closed
+    let signal_command = vec!["tmux", "wait-for", "-S", self.signal.as_str()];
+    let params: Vec<String> = signal_command.iter().map(|arg| arg.to_string()).collect();
+    self.executor.execute(params);
   }
 
   pub fn swap_panes(&mut self) {
-    let active_pane_id = self.active_pane_id.as_mut().unwrap().clone();
-    let thumbs_pane_id = self.thumbs_pane_id.as_mut().unwrap().clone();
-
-    let swap_command = vec![
-      "tmux",
-      "swap-pane",
-      "-d",
-      "-s",
-      active_pane_id.as_str(),
-      "-t",
-      thumbs_pane_id.as_str(),
-    ];
-
-    let params = swap_command
-      .iter()
-      .filter(|&s| !s.is_empty())
-      .map(|arg| arg.to_string())
-      .collect();
-
-    self.executor.execute(params);
+    // No-op: display-popup doesn't need pane swapping
   }
 
   pub fn resize_pane(&mut self) {
-    let active_pane_zoomed = self.active_pane_zoomed.as_mut().unwrap().clone();
-
-    if !active_pane_zoomed {
-      return;
-    }
-
-    let thumbs_pane_id = self.thumbs_pane_id.as_mut().unwrap().clone();
-
-    let resize_command = vec!["tmux", "resize-pane", "-t", thumbs_pane_id.as_str(), "-Z"];
-
-    let params = resize_command
-      .iter()
-      .filter(|&s| !s.is_empty())
-      .map(|arg| arg.to_string())
-      .collect();
-
-    self.executor.execute(params);
+    // No-op: display-popup handles sizing via -w/-h
   }
 
   pub fn wait_thumbs(&mut self) {
-    let wait_command = vec!["tmux", "wait-for", self.signal.as_str()];
-    let params = wait_command.iter().map(|arg| arg.to_string()).collect();
-
-    self.executor.execute(params);
+    // No-op: display-popup blocks until closed
   }
 
   pub fn retrieve_content(&mut self) {

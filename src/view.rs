@@ -105,7 +105,7 @@ impl<'a> View<'a> {
       let clean = line.trim_end_matches(|c: char| c.is_whitespace());
 
       if !clean.is_empty() {
-        print!("{goto}{text}", goto = cursor::Goto(1, index as u16 + 1), text = line);
+        write!(stdout, "{goto}{text}", goto = cursor::Goto(1, index as u16 + 1), text = line).unwrap();
       }
     }
 
@@ -160,7 +160,7 @@ impl<'a> View<'a> {
       let offset = (mat.x as u16) - (extra as u16);
       let text = self.make_hint_text(mat.text);
 
-      print!(
+      write!(stdout,
         "{goto}{background}{foregroud}{text}{resetf}{resetb}",
         goto = cursor::Goto(offset + 1, mat.y as u16 + 1),
         foregroud = color::Fg(&**selected_color),
@@ -168,7 +168,7 @@ impl<'a> View<'a> {
         resetf = color::Fg(color::Reset),
         resetb = color::Bg(color::Reset),
         text = &text
-      );
+      ).unwrap();
 
       if let Some(ref hint) = mat.hint {
         let extra_position = match self.position {
@@ -181,7 +181,7 @@ impl<'a> View<'a> {
         let text = self.make_hint_text(hint.as_str());
         let final_position = std::cmp::max(offset as i16 + extra_position as i16, 0);
 
-        print!(
+        write!(stdout,
           "{goto}{background}{foregroud}{text}{resetf}{resetb}",
           goto = cursor::Goto(final_position as u16 + 1, mat.y as u16 + 1),
           foregroud = color::Fg(&*self.hint_foreground_color),
@@ -189,10 +189,10 @@ impl<'a> View<'a> {
           resetf = color::Fg(color::Reset),
           resetb = color::Bg(color::Reset),
           text = &text
-        );
+        ).unwrap();
 
         if hint.starts_with(typed_hint) {
-          print!(
+          write!(stdout,
             "{goto}{background}{foregroud}{text}{resetf}{resetb}",
             goto = cursor::Goto(final_position as u16 + 1, mat.y as u16 + 1),
             foregroud = color::Fg(&*self.multi_foreground_color),
@@ -200,7 +200,7 @@ impl<'a> View<'a> {
             resetf = color::Fg(color::Reset),
             resetb = color::Bg(color::Reset),
             text = &typed_hint
-          );
+          ).unwrap();
         }
       }
     }
