@@ -225,7 +225,7 @@ impl<'a> Swapper<'a> {
     let pane_height = self.active_pane_height.unwrap_or(24);
 
     let popup_command = format!(
-        "tmux capture-pane -J -t {active_pane_id} -p{scroll_params} | tail -n {height} | {dir}/target/release/thumbs -f '%U:%H' -t {tmp} {args}",
+        "tmux capture-pane -J -t {active_pane_id} -p{scroll_params} | tail -n {height} | perl -0777 -pe 's/\\xC2\\xAB(.*?)\\xC2\\xBB/($x = \"\\xC2\\xAB$1\\xC2\\xBB\") =~ s\\/\\n\\/ \\/g; $x/ges' | {dir}/target/release/thumbs -f '%U:%H' -t {tmp} {args}",
         active_pane_id = active_pane_id,
         scroll_params = scroll_params,
         height = pane_height,
