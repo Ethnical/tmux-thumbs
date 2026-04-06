@@ -29,7 +29,7 @@ const PATTERNS: [(&'static str, &'static str); 15] = [
 pub struct Match<'a> {
   pub x: i32,
   pub y: i32,
-  pub pattern: &'a str,
+  pub pattern: String,
   pub text: &'a str,
   pub hint: Option<String>,
 }
@@ -72,21 +72,22 @@ impl<'a> State<'a> {
   pub fn matches(&self, reverse: bool, unique: bool) -> Vec<Match<'a>> {
     let mut matches = Vec::new();
 
-    let exclude_patterns = EXCLUDE_PATTERNS
+    let exclude_patterns: Vec<(String, Regex)> = EXCLUDE_PATTERNS
       .iter()
-      .map(|tuple| (tuple.0, Regex::new(tuple.1).unwrap()))
-      .collect::<Vec<_>>();
+      .map(|tuple| (tuple.0.to_string(), Regex::new(tuple.1).unwrap()))
+      .collect();
 
-    let custom_patterns = self
+    let custom_patterns: Vec<(String, Regex)> = self
       .regexp
       .iter()
-      .map(|regexp| ("custom", Regex::new(regexp).expect("Invalid custom regexp")))
-      .collect::<Vec<_>>();
+      .enumerate()
+      .map(|(i, regexp)| (format!("custom-{}", i), Regex::new(regexp).expect("Invalid custom regexp")))
+      .collect();
 
-    let patterns = PATTERNS
+    let patterns: Vec<(String, Regex)> = PATTERNS
       .iter()
-      .map(|tuple| (tuple.0, Regex::new(tuple.1).unwrap()))
-      .collect::<Vec<_>>();
+      .map(|tuple| (tuple.0.to_string(), Regex::new(tuple.1).unwrap()))
+      .collect();
 
     // This order determines the priority of pattern matching
     let all_patterns = [exclude_patterns, custom_patterns, patterns].concat();
@@ -100,7 +101,7 @@ impl<'a> State<'a> {
         let submatches = all_patterns
           .iter()
           .filter_map(|tuple| match tuple.1.find_iter(chunk).nth(0) {
-            Some(m) => Some((tuple.0, tuple.1.clone(), m)),
+            Some(m) => Some((tuple.0.as_str(), tuple.1.clone(), m)),
             None => None,
           })
           .collect::<Vec<_>>();
@@ -132,7 +133,7 @@ impl<'a> State<'a> {
                 matches.push(Match {
                   x: offset + matching.start() as i32 + *substart as i32,
                   y: index as i32,
-                  pattern: name,
+                  pattern: name.to_string(),
                   text: subtext,
                   hint: None,
                 });
@@ -346,9 +347,9 @@ mod tests {
     let results = State::new(&lines, "abcd", &custom).matches(false, false);
 
     assert_eq!(results.len(), 2);
-    assert_eq!(results.get(0).unwrap().pattern.clone(), "markdown_url");
+    assert_eq!(results.get(0).unwrap().pattern.as_str(), "markdown_url");
     assert_eq!(results.get(0).unwrap().text.clone(), "https://github.io?foo=bar");
-    assert_eq!(results.get(1).unwrap().pattern.clone(), "markdown_url");
+    assert_eq!(results.get(1).unwrap().pattern.as_str(), "markdown_url");
     assert_eq!(results.get(1).unwrap().text.clone(), "http://cdn.com/img.jpg");
   }
 
@@ -360,13 +361,13 @@ mod tests {
 
     assert_eq!(results.len(), 4);
     assert_eq!(results.get(0).unwrap().text.clone(), "https://www.rust-lang.org/tools");
-    assert_eq!(results.get(0).unwrap().pattern.clone(), "url");
+    assert_eq!(results.get(0).unwrap().pattern.as_str(), "url");
     assert_eq!(results.get(1).unwrap().text.clone(), "https://crates.io");
-    assert_eq!(results.get(1).unwrap().pattern.clone(), "url");
+    assert_eq!(results.get(1).unwrap().pattern.as_str(), "url");
     assert_eq!(results.get(2).unwrap().text.clone(), "https://github.io?foo=bar");
-    assert_eq!(results.get(2).unwrap().pattern.clone(), "url");
+    assert_eq!(results.get(2).unwrap().pattern.as_str(), "url");
     assert_eq!(results.get(3).unwrap().text.clone(), "ssh://github.io");
-    assert_eq!(results.get(3).unwrap().pattern.clone(), "url");
+    assert_eq!(results.get(3).unwrap().pattern.as_str(), "url");
   }
 
   #[test]

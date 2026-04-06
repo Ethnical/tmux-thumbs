@@ -25,6 +25,8 @@ pub struct View<'a> {
   background_color: Box<dyn color::Color>,
   hint_background_color: Box<dyn color::Color>,
   hint_foreground_color: Box<dyn color::Color>,
+  regexp_foreground_colors: Vec<Box<dyn color::Color>>,
+  regexp_background_colors: Vec<Box<dyn color::Color>>,
   chosen: Vec<(String, bool)>,
 }
 
@@ -49,6 +51,8 @@ impl<'a> View<'a> {
     background_color: Box<dyn color::Color>,
     hint_foreground_color: Box<dyn color::Color>,
     hint_background_color: Box<dyn color::Color>,
+    regexp_foreground_colors: Vec<Box<dyn color::Color>>,
+    regexp_background_colors: Vec<Box<dyn color::Color>>,
   ) -> View<'a> {
     let matches = state.matches(reverse, unique);
     let skip = if reverse { matches.len() - 1 } else { 0 };
@@ -68,6 +72,8 @@ impl<'a> View<'a> {
       background_color,
       hint_foreground_color,
       hint_background_color,
+      regexp_foreground_colors,
+      regexp_background_colors,
       chosen: vec![],
     }
   }
@@ -108,10 +114,32 @@ impl<'a> View<'a> {
     for mat in self.matches.iter() {
       let chosen_hint = self.chosen.iter().any(|(hint, _)| hint == mat.text);
 
+      // Determine per-regex colors if this is a custom pattern
+      let regexp_fg = if mat.pattern.starts_with("custom-") {
+        if let Ok(idx) = mat.pattern[7..].parse::<usize>() {
+          self.regexp_foreground_colors.get(idx)
+        } else {
+          None
+        }
+      } else {
+        None
+      };
+      let regexp_bg = if mat.pattern.starts_with("custom-") {
+        if let Ok(idx) = mat.pattern[7..].parse::<usize>() {
+          self.regexp_background_colors.get(idx)
+        } else {
+          None
+        }
+      } else {
+        None
+      };
+
       let selected_color = if chosen_hint {
         &self.multi_foreground_color
       } else if selected == Some(mat) {
         &self.select_foreground_color
+      } else if let Some(fg) = regexp_fg {
+        fg
       } else {
         &self.foreground_color
       };
@@ -119,6 +147,8 @@ impl<'a> View<'a> {
         &self.multi_background_color
       } else if selected == Some(mat) {
         &self.select_background_color
+      } else if let Some(bg) = regexp_bg {
+        bg
       } else {
         &self.background_color
       };

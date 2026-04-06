@@ -187,7 +187,15 @@ impl<'a> Swapper<'a> {
             return vec![format!("--{}", name), format!("'{}'", value)];
           }
 
-          if name.starts_with("regexp") {
+          if name.starts_with("regexp") && name.ends_with("-fg-color") {
+            return vec!["--regexp-fg-color".to_string(), format!("'{}'", value)];
+          }
+
+          if name.starts_with("regexp") && name.ends_with("-bg-color") {
+            return vec!["--regexp-bg-color".to_string(), format!("'{}'", value)];
+          }
+
+          if name.starts_with("regexp") && !name.contains("-color") {
             return vec!["--regexp".to_string(), format!("'{}'", value.replace("\\\\", "\\"))];
           }
 

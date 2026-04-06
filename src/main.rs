@@ -130,6 +130,20 @@ fn app_args<'a>() -> clap::ArgMatches<'a> {
         .short("c"),
     )
     .arg(
+      Arg::with_name("regexp_fg_color")
+        .help("Sets the foreground color for a custom regexp (one per --regexp, in order)")
+        .long("regexp-fg-color")
+        .takes_value(true)
+        .multiple(true),
+    )
+    .arg(
+      Arg::with_name("regexp_bg_color")
+        .help("Sets the background color for a custom regexp (one per --regexp, in order)")
+        .long("regexp-bg-color")
+        .takes_value(true)
+        .multiple(true),
+    )
+    .arg(
       Arg::with_name("target")
         .help("Stores the hint in the specified path")
         .long("target")
@@ -164,6 +178,17 @@ fn main() {
   let multi_foreground_color = colors::get_color(args.value_of("multi_foreground_color").unwrap());
   let multi_background_color = colors::get_color(args.value_of("multi_background_color").unwrap());
 
+  let regexp_fg_colors: Vec<Box<dyn termion::color::Color>> = if let Some(items) = args.values_of("regexp_fg_color") {
+    items.map(|c| colors::get_color(c)).collect()
+  } else {
+    vec![]
+  };
+  let regexp_bg_colors: Vec<Box<dyn termion::color::Color>> = if let Some(items) = args.values_of("regexp_bg_color") {
+    items.map(|c| colors::get_color(c)).collect()
+  } else {
+    vec![]
+  };
+
   let stdin = io::stdin();
   let mut handle = stdin.lock();
   let mut output = String::new();
@@ -190,6 +215,8 @@ fn main() {
       background_color,
       hint_foreground_color,
       hint_background_color,
+      regexp_fg_colors,
+      regexp_bg_colors,
     );
 
     viewbox.present()
